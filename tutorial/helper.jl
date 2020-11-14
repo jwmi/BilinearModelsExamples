@@ -10,6 +10,7 @@ using Statistics
 using CSV
 using PyPlot
 using GLM
+using RData
 
 
 
