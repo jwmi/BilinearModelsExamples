@@ -14259,15 +14259,18 @@ a.anchor-link {
 
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h1 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">&#182;</a></h1><p>Generalized bilinear models (GBMs) are a flexible extension of generalized linear models (GLMs) to include latent factors as well as row covariates, column covariates, and interactions to analyze matrix data (Choulakian, 1996; Miller and Carter, 2020).</p>
-<p>This tutorial shows how to use the <a href="https://github.com/jwmi/BilinearModels.jl">BilinearModels.jl</a> Julia package to perform estimation and inference in negative binomial GBMs for count data.  Please cite Miller and Carter (2020) if you use the BilinearModels.jl package in a publication.</p>
-
+<h1 id="Tutorial-for-BilinearModels-package">Tutorial for BilinearModels package<a class="anchor-link" href="#Tutorial-for-BilinearModels-package">&#182;</a></h1><h2 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">&#182;</a></h2><p>Generalized bilinear models (GBMs) are a flexible extension of generalized linear models (GLMs) to include latent factors as well as row covariates, column covariates, and interactions to analyze matrix data (Choulakian, 1996; Miller and Carter, 2020).</p>
+<p>This tutorial shows how to use the <a href="https://github.com/jwmi/BilinearModels.jl">BilinearModels.jl</a> Julia package to perform estimation and inference in negative binomial GBMs for count data.  Please cite Miller and Carter (2020) if you use the BilinearModels.jl package for research leading to a publication.</p>
+<p>In a GBM, the data matrix $Y = (Y_{i j})\in\mathbb{R}^{I\times J}$ is modeled by parametrizing the mean $\mathrm{E}(Y)$ such that
+$$ g(\mathrm{E}(Y)) = X A^\texttt{T} + B Z^\texttt{T} + X C Z^\texttt{T} + U D V^\texttt{T} $$
+where $g$ is a a link function that is applied element-wise. The "bilinear" part $U D V^\texttt{T}$ is a low-rank matrix that captures latent effects due, for example, to unobserved covariates such as batch.  See Miller and Carter (2020) for details.</p>
+<center><img src="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/figures/model-g.png" width="800"></center>
 </div>
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <hr>
-<h1 id="Setup">Setup<a class="anchor-link" href="#Setup">&#182;</a></h1><h2 id="Installing-BilinearModels.jl-package">Installing BilinearModels.jl package<a class="anchor-link" href="#Installing-BilinearModels.jl-package">&#182;</a></h2><p>First, download and install <a href="https://julialang.org/">Julia</a>.  Start Julia and enter the following commands at the <code>julia&gt;</code> prompt to install the <a href="https://github.com/jwmi/BilinearModels.jl">BilinearModels.jl</a> package:</p>
+<h2 id="Setup">Setup<a class="anchor-link" href="#Setup">&#182;</a></h2><h3 id="Installing-BilinearModels.jl-package">Installing BilinearModels.jl package<a class="anchor-link" href="#Installing-BilinearModels.jl-package">&#182;</a></h3><p>First, download and install <a href="https://julialang.org/">Julia</a>.  Start Julia and enter the following commands at the <code>julia&gt;</code> prompt to install the <a href="https://github.com/jwmi/BilinearModels.jl">BilinearModels.jl</a> package:</p>
 
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
@@ -14377,7 +14380,7 @@ iteration 13: logp = -31.99633369482534
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Installing-other-packages-for-tutorial">Installing other packages for tutorial<a class="anchor-link" href="#Installing-other-packages-for-tutorial">&#182;</a></h2><p>We will also use some other Julia packages in this tutorial.  To install these, do:</p>
+<h3 id="Installing-other-packages-for-tutorial">Installing other packages for tutorial<a class="anchor-link" href="#Installing-other-packages-for-tutorial">&#182;</a></h3><p>We will also use some other Julia packages in this tutorial.  To install these, do:</p>
 
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
@@ -14398,12 +14401,12 @@ iteration 13: logp = -31.99633369482534
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h2 id="Loading-example-data">Loading example data<a class="anchor-link" href="#Loading-example-data">&#182;</a></h2><p>As a running example, we will use 412 RNA-seq samples from heart tissue provided by the <a href="https://jhubiostatistics.shinyapps.io/recount/">Recount2 project</a> (Collado-Torres et al., 2017), originally collected as part of the Genotype-Tissue Expression (GTEx) project (Melé et al., 2015).</p>
+<h3 id="Loading-example-data">Loading example data<a class="anchor-link" href="#Loading-example-data">&#182;</a></h3><p>As a running example, we will use 412 RNA-seq samples from heart tissue provided by the <a href="https://jhubiostatistics.shinyapps.io/recount/">Recount2 project</a> (Collado-Torres et al., 2017), originally collected as part of the Genotype-Tissue Expression (GTEx) project (Melé et al., 2015).</p>
 <p>Download the following files to a folder on your computer:</p>
 <ul>
-<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/data/gtex_sample_info-heart.txt">Sample information file (344 KB)</a></li>
-<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/data/gtex_gene_info-heart.txt">Gene information file (2 MB)</a></li>
-<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/data/gtex_data-heart.rda">Count data file (15.7 MB)</a></li>
+<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/gtex_sample_info-heart.txt">Sample information file (344 KB)</a></li>
+<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/gtex_gene_info-heart.txt">Gene information file (2 MB)</a></li>
+<li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/gtex_data-heart.rda">Data file (15.7 MB)</a></li>
 <li><a href="https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/helper.jl">Miscellaneous helper functions</a></li>
 </ul>
 
@@ -14412,8 +14415,24 @@ iteration 13: logp = -31.99633369482534
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <hr>
-<h1 id="Simple-normalization">Simple normalization<a class="anchor-link" href="#Simple-normalization">&#182;</a></h1>
+<h2 id="Simple-normalization">Simple normalization<a class="anchor-link" href="#Simple-normalization">&#182;</a></h2><p>Count data are often preprocessed using a transformation such as $log(Y_{i j}+1)$ and then standardizing the rows and columns.</p>
+<p>GBMs allow one to model a data matrix using row covariates, column covariates, and latent factors.  However, even when no covariates or latent factors are used, the model can be used to normalize the data.</p>
+
 </div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-julia"><pre><span></span><span class="n">cd</span><span class="p">(</span><span class="s">&quot;tutorial/&quot;</span><span class="p">)</span>  <span class="c"># change directory to the location of helper.jl and the GTEx data files.</span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
@@ -14445,10 +14464,66 @@ iteration 13: logp = -31.99633369482534
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[1]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-julia"><pre><span></span><span class="k">using</span> <span class="n">BilinearModels</span>
+<div class=" highlight hl-julia"><pre><span></span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-julia"><pre><span></span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-julia"><pre><span></span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-julia"><pre><span></span>
+</pre></div>
+
+     </div>
+</div>
+</div>
+</div>
+
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+     <div class="CodeMirror cm-s-jupyter">
+<div class=" highlight hl-julia"><pre><span></span>
 </pre></div>
 
      </div>
@@ -14459,16 +14534,10 @@ iteration 13: logp = -31.99633369482534
 </div>
 <div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<p>This is a test.  Let's try some math: $f(x) = x^2$.</p>
-$$ \sum_{i=1}^n a_i = 1. $$
-</div>
-</div>
-<div class="jp-Cell-inputWrapper"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h1 id="References">References<a class="anchor-link" href="#References">&#182;</a></h1><p>Choulakian, V. <em>Generalized bilinear models</em>. Psychometrika, 61(2):271–283, 1996.</p>
-<p>Collado-Torres, L., Nellore, A., Kammers, K., Ellis, S. E., Taub, M. A., Hansen, K. D., Jaffe, A. E., Langmead, B., and Leek, J. T. <strong>Reproducible RNA-seq analysis using recount2</strong>. Nature Biotechnology, 35(4):319–321, 2017.</p>
-<p>Melé, M., Ferreira, P. G., Reverter, F., DeLuca, D. S., Monlong, J., Sammeth, M., Young, T. R., Goldmann, J. M., Pervouchine, D. D., Sullivan, T. J., et al. <strong>The human transcriptome across tissues and individuals</strong>. Science, 348(6235):660–665, 2015.</p>
-<p>Miller, J. W. and Carter, S. L.  <strong>Inference in generalized bilinear models</strong>. <a href="https://arxiv.org/abs/2010.04896">arXiv preprint: arXiv2010.04896</a>, 2020.</p>
+<h2 id="References">References<a class="anchor-link" href="#References">&#182;</a></h2><p>Choulakian, V. <strong>Generalized bilinear models.</strong> Psychometrika, 61(2):271–283, 1996.</p>
+<p>Collado-Torres, L., Nellore, A., Kammers, K., Ellis, S. E., Taub, M. A., Hansen, K. D., Jaffe, A. E., Langmead, B., and Leek, J. T. <strong>Reproducible RNA-seq analysis using recount2.</strong> Nature Biotechnology, 35(4):319–321, 2017.</p>
+<p>Melé, M., Ferreira, P. G., Reverter, F., DeLuca, D. S., Monlong, J., Sammeth, M., Young, T. R., Goldmann, J. M., Pervouchine, D. D., Sullivan, T. J., et al. <strong>The human transcriptome across tissues and individuals.</strong> Science, 348(6235):660–665, 2015.</p>
+<p>Miller, J. W. and Carter, S. L.  <strong>Inference in generalized bilinear models.</strong> <a href="https://arxiv.org/abs/2010.04896">arXiv preprint: arXiv2010.04896</a>, 2020.</p>
 <p><br><br><br><br><br></p>
 
 </div>
