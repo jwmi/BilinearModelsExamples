@@ -1,6 +1,6 @@
 # Tutorial for BilinearModels.jl package
 
-A tutorial is provided here: [Tutorial for BilinearModels package.html](https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/Tutorial%20for%20BilinearModels%20package.html).
+A tutorial is provided here: [Tutorial for BilinearModels package.html](https://htmlpreview.github.io/?https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/Tutorial%20for%20BilinearModels%20package.html).
 The Jupyter notebook file used to create this HTML file is `Tutorial for BilinearModels package.ipynb`.
 
 
