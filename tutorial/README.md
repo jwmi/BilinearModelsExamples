@@ -1,9 +1,12 @@
-# Data for BilinearModels tutorial
+# Tutorial for BilinearModels.jl package
+
+A tutorial is provided here: [Tutorial for BilinearModels package.html](https://github.com/jwmi/BilinearModelsExamples/raw/main/tutorial/Tutorial%20for%20BilinearModels%20package.html).
+The Jupyter notebook file used to create this HTML file is `Tutorial for BilinearModels package.ipynb`.
 
 
 ## GTEx Heart data from Recount2
 
-This is a subset of the recount2 GTEx dataset, downloaded from https://jhubiostatistics.shinyapps.io/recount on 8/7/2020. The recount2 data is released under a [CC-BY-4.0 license](https://creativecommons.org/licenses/by/4.0/deed.ast), according to the recount website (https://jhubiostatistics.shinyapps.io/recount/ -> Documentation -> Data license).
+As a running example, the tutorial uses a subset of the Recount2 GTEx dataset, downloaded from https://jhubiostatistics.shinyapps.io/recount on 8/7/2020. The recount2 data is released under a [CC-BY-4.0 license](https://creativecommons.org/licenses/by/4.0/deed.ast), according to the recount website (https://jhubiostatistics.shinyapps.io/recount/ -> Documentation -> Data license).
 
 Cite the following publications if you use this data in your research:
 
