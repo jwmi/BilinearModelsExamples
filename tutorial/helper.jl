@@ -43,10 +43,14 @@ function plotgroups(x,y,labels;kwargs...)
     # legend()
 end
 
-function pcaplot(X,labels=ones(Int,size(X,2));kwargs...)
+function pcaplot(X,colorvalue=ones(Int,size(X,2));numeric=false,kwargs...)
     scores,directions,scales = pca(X,2)
-    # figure(); clf(); grid(true)
-    plotgroups(scores[:,1],scores[:,2],labels;kwargs...)
+    if numeric
+        # scatter(scores[:,1], scores[:,2], 2, c=colorvalue; edgecolor="k", linewidth=0.05, cmap="seismic")
+        scatter(scores[:,1], scores[:,2]; c=vec(colorvalue), kwargs...)
+    else
+        plotgroups(scores[:,1],scores[:,2],colorvalue;kwargs...)
+    end
     xlabel("PC1")
     ylabel("PC2")
     return scores
