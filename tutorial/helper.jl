@@ -13,7 +13,7 @@ using GLM
 using RData
 
 
-
+center(x,dim=1) = x .- mean(x,dims=dim)
 scale(x,dim=1) = (x .- mean(x,dims=dim))./std(x,dims=dim)
 moment2(x) = (x .- mean(x)).^2
 
@@ -380,18 +380,20 @@ end
 benjamini_hochberg(p) = (o = sortperm(p); m=length(p); padj = zeros(Float64,m); padj[o] = p[o].*(m./(1:m)); padj)
 
 
-function standardize_rows_and_cols(Y)
+function standardize(X)
     max_iter = 100
     tol = 1e-6
-    Y_old = copy(Y)
+    X_old = copy(X)
     for iter = 1:max_iter 
-        Y = scale(Y,1)
-        Y = scale(Y,2)
-        if (maximum(abs.(Y - Y_old)) < tol); break; end
-        Y_old = copy(Y)
+        X = scale(X,1)
+        X = scale(X,2)
+        if (maximum(abs.(X - X_old)) < tol); break; end
+        X_old = copy(X)
     end
-    return Y
+    return X
 end
+
+
 
 
 end
