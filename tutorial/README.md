@@ -1,6 +1,6 @@
 # Tutorial for BilinearModels.jl package
 
-A tutorial is provided in the Jupyter notebook file called `Tutorial for BilinearModels package.ipynb`.
+A tutorial is provided in the Jupyter notebook [Tutorial for BilinearModels package.ipynb](Tutorial for BilinearModels package.ipynb).
 For an html rendering of the tutorial, [see here](http://jwmi.github.io/software/BilinearModels-tutorial.html).
 
 
