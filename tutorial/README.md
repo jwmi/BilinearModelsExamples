@@ -1,7 +1,8 @@
 # Tutorial for BilinearModels.jl package
 
 A tutorial is provided in the Jupyter notebook [Tutorial for BilinearModels package.ipynb](Tutorial%20for%20BilinearModels%20package.ipynb).
-For an html rendering of the tutorial, [see here](http://jwmi.github.io/software/BilinearModels-tutorial.html).
+If the built-in GitHub notebook viewer fails, try viewing it with nbviewer [here](https://nbviewer.jupyter.org/github/jwmi/BilinearModelsExamples/blob/main/tutorial/Tutorial%20for%20BilinearModels%20package.ipynb).
+Or, for a simple HTML rendering of the tutorial, [see here](http://jwmi.github.io/software/BilinearModels-tutorial.html).
 
 
 ## Licensing/citation info for GTEx Heart data from Recount2
