@@ -1,9 +1,7 @@
 # Miscellaneous helper functions
 #
-# Author: Jeffrey W. Miller
-# Date: 11/23/2020
-#
 # This file is released under the MIT "Expat" License.
+# Copyright (c) 2020: Jeffrey W. Miller.
 
 using BilinearModels
 using Statistics
