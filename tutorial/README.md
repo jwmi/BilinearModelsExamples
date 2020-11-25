@@ -4,7 +4,7 @@ A tutorial is provided in the Jupyter notebook file called `Tutorial for Bilinea
 For an html rendering of the tutorial, [see here](http://jwmi.github.io/software/BilinearModels-tutorial.html).
 
 
-## GTEx Heart data from Recount2
+## Licensing/citation info for GTEx Heart data from Recount2
 
 As a running example, the tutorial uses a subset of the Recount2 GTEx dataset, downloaded from https://jhubiostatistics.shinyapps.io/recount on 8/7/2020. The recount2 data is released under a [CC-BY-4.0 license](https://creativecommons.org/licenses/by/4.0/deed.ast), according to the recount website (https://jhubiostatistics.shinyapps.io/recount/ -> Documentation -> Data license).
 
