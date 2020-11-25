@@ -1,21 +1,26 @@
 # Miscellaneous helper functions
 #
 # Author: Jeffrey W. Miller
-# Date: 11/8/2020
+# Date: 11/23/2020
 #
 # This file is released under the MIT "Expat" License.
 
 using BilinearModels
 using Statistics
+using Distributions
 using CSV
-using PyPlot
-using GLM
 using RData
+using GLM
+using CategoricalArrays
+using DataFrames
+using PyPlot
+
+using Random
+using LinearAlgebra: pinv, diag
 
 
 center(x,dim=1) = x .- mean(x,dims=dim)
-scale(x,dim=1) = (x .- mean(x,dims=dim))./std(x,dims=dim)
-moment2(x) = (x .- mean(x)).^2
+center_scale(x,dim=1) = (x .- mean(x,dims=dim))./std(x,dims=dim)
 
 markers = ["o","v","^","s","*","<",">","p","+","x","D","d","."]
 
@@ -32,27 +37,35 @@ function pca(X,k)
     return scores,directions,scales
 end
 
+
 function plotgroups(x,y,labels;kwargs...)
     for (i_v,v) in enumerate(sort(unique(labels,dims=1)))
         subset = findall(labels.==v)
         col = color_palette[mod.(i_v-1,length(color_palette))+1]
-        # fmt = markers[div.(i_v-1,length(color_palette))+1]
-        fmt = markers[mod.(div.(i_v-1,length(color_palette)),length(markers))+1]
-        plot(x[subset],y[subset],fmt,label=v,color=col;kwargs...)
+        marker = markers[mod.(div.(i_v-1,length(color_palette)),length(markers))+1]
+        scatter(x[subset],y[subset]; marker=marker, label=string(v), c=col, kwargs...)
     end
-    # legend()
 end
 
-function pcaplot(X,colorvalue=ones(Int,size(X,2));numeric=false,kwargs...)
-    scores,directions,scales = pca(X,2)
-    if numeric
-        # scatter(scores[:,1], scores[:,2], 2, c=colorvalue; edgecolor="k", linewidth=0.05, cmap="seismic")
-        scatter(scores[:,1], scores[:,2]; c=vec(colorvalue), kwargs...)
-    else
-        plotgroups(scores[:,1],scores[:,2],colorvalue;kwargs...)
+
+function pcaplots(X,colorvalues; s=20, ec="k", lw=0.25, kwargs...)
+    scores = pca(X,2)[1]
+    for name in names(colorvalues)
+        x = colorvalues[!,name]
+        figure(); clf(); grid(true)
+        if isa(x,CategoricalArray)
+            plotgroups(scores[:,1], scores[:,2], string.(x); s=s, ec=ec, lw=lw, kwargs...)
+            subplots_adjust(right=0.83)
+            legend()
+        else
+            scatter(scores[:,1], scores[:,2]; c=x, s=s, ec=ec, lw=lw, kwargs...)
+            subplots_adjust(right=0.9)
+            colorbar(fraction=0.04)
+        end
+        xlabel("PC1")
+        ylabel("PC2")
+        title("PCA scores ($(string(name)))")
     end
-    xlabel("PC1")
-    ylabel("PC2")
     return scores
 end
 
@@ -70,146 +83,61 @@ function standard_normalizations(C,lengths)
 end
 
 
-function design_matrix(formula, dataframe)
+function design_matrix0(formula, dataframe)
     modelframe = ModelFrame(formula, dataframe)
     X = ModelMatrix(modelframe).m
-    X[:,2:end] = scale(X[:,2:end],1)
+    X[:,2:end] = center_scale(X[:,2:end],1)
     return X,coefnames(modelframe)
 end
 
 
-##############################################################################
-
-
-if false
-
-using PyPlot
-using Random
-using Distributions
-using DataFrames
-using GLM
-using Interpolations
-
-
-
-
-
-# _________________________________________________________________________________________________
-# Functions
-
-rms(x) = sqrt(mean(x.^2))
-rms(x,dim) = sqrt.(mean(x.^2,dims=dim))
-avgdif(x,y) = ((x+y)/2, x-y)
-unitscale(x,dim=1) = (z = x .- mean(x,dims=dim); z./sqrt.(sum(z.^2,dims=dim)))
-ranks(x) = invperm(sortperm(x))
-logit(p) = log.(p./(1-p))
-
-function plotcdf(x; log=false, kwargs...)
-    n = length(x)
-    if log; semilogx(sort(x), (1:n)/n; kwargs...)
-    else; plot(sort(x), (1:n)/n; kwargs...)
+function design_matrix(formula, dataframe)
+    n = size(dataframe,1)
+    X_blocks = Matrix{Float64}[]
+    coefnames = String[]
+    terms = (isa(formula.rhs,Tuple) ? formula.rhs : (formula.rhs,))
+    for term in terms
+        if isa(term,ConstantTerm)
+            push!(X_blocks, ones(n,1))
+            push!(coefnames,"(Intercept)")
+        elseif isa(term,InteractionTerm)
+            if (length(term.terms) > 2); return design_matrix0(formula, dataframe); end
+            s1,s2 = term.terms[1].sym,term.terms[2].sym
+            x1,x2 = dataframe[!,s1],dataframe[!,s2]
+            
+            if isa(x1,CategoricalArray) && isa(x2,CategoricalArray); return design_matrix0(formula, dataframe); end
+            
+            if isa(x1,CategoricalArray) || isa(x2,CategoricalArray)
+                if isa(x1,CategoricalArray)
+                    x1,x2 = x2,x1
+                    s1,s2 = s2,s1
+                end
+                A,values = one_hot(x2)
+                push!(X_blocks, x1.*A[:,1:end-1])
+                labelnames = [string(s1)*" & "*string(s2)*": "*string(v) for v in values]
+                coefnames = [coefnames; labelnames[1:end-1]]
+            else
+                push!(X_blocks, reshape(x1.*x2,n,1))
+                push!(coefnames, string(s1)*" & "*string(s2))
+            end
+        else
+            x = dataframe[!,term.sym]
+            if isa(x,CategoricalArray)
+                A,values = one_hot(x)
+                push!(X_blocks, A[:,1:end-1])
+                labelnames = [string(term.sym)*": "*string(v) for v in values]
+                coefnames = [coefnames; labelnames[1:end-1]]
+            else
+                push!(X_blocks, reshape(x,n,1))
+                push!(coefnames, string(term.sym))
+            end
+        end
     end
+    X = hcat(X_blocks...)        
+    X[:,2:end] = center_scale(X[:,2:end],1)
+    return X,coefnames
 end
 
-function plot_avgdif(fig,E,a,b)
-    figure(fig); clf(); grid(true)
-    avg,dif = avgdif(E[:,a],E[:,b])
-    plot(avg,dif,".",ms=1)
-    title("MA plot of $a and $b")
-    xlabel("($a + $b)/2")
-    ylabel("$a - $b")
-end
-
-# This interface is better:
-function plot_avgdif(x,y)
-    avg,dif = avgdif(x,y)
-    plot(avg,dif,".",ms=1)
-    title("MA plot")
-    xlabel("(x + y)/2")
-    ylabel("x - y")
-end
-
-function plotdiffs(fig,E,a,b,c,d)
-    figure(fig); clf(); grid(true)
-    avg,dif1 = avgdif(E[:,a],E[:,b])
-    avg,dif2 = avgdif(E[:,c],E[:,d])
-    plot(dif1,dif2,".",ms=1)
-    corr = round(cor(dif1,dif2),3)
-    title("Diff vs Diff plot (corr = $corr)")
-    xlabel("$a - $b")
-    ylabel("$c - $d")
-end
-
-# Requires MultivariateStats
-function mdsplot(E,labels;kwargs...)
-    # M = fit(PCA,E; maxoutdim=2)
-    # z = transform(M,E)
-    D = gram2dmat(E'*E)
-    z = classical_mds(D,2)
-    # if size(z,1)<2; error("Rank of input is insufficient for 2 principal components."); end
-    figure(); clf(); grid(true)
-    plotgroups(z[1,:],z[2,:],labels;kwargs...)
-    xlabel("Dim1")
-    ylabel("Dim2")
-    legend()
-end
-
-function qqplot(z)
-    n = length(z)
-    q = quantile.(Normal(),((1:n)-0.5)/n)
-    plot(q,q,"k--")
-    plot(q,sort(z),".")
-    xlabel("Normal")
-    ylabel("Observed")
-    title("Q-Q plot")
-end
-
-
-function figure_row(j,ncol=4)
-    if mod(j,ncol)==0
-        figure(figsize=(14,3)); clf()
-        subplots_adjust(wspace=0.25,bottom=0.2,left=0.05,right=0.95)
-    end
-    subplot(1,ncol,mod(j-1,ncol)+1)
-end
-
-function quantile_normalize_normal(E)
-    I,J = size(E)
-    F = zeros(I,J)
-    for j = 1:J
-        F[:,j] = quantile.(Normal(0,1),(ranks(E[:,j])-0.5)/I)
-    end
-    return F
-end
-
-function quantile_normalize(E)
-    I,J = size(E)
-    F = zeros(I,J)
-    D = vec(mean(sort(E,1),dims=2))
-    for j = 1:J
-        F[:,j] = D[ranks(E[:,j])]
-    end
-    return F
-end
-
-function variance_explained(E,factor)
-    # M = ModelMatrix(ModelFrame(@formula(sample_id ~ 0 + factor), sample_info)).m
-    M = [float(factor[j]==c) for j = 1:length(factor), c in unique(factor)]
-    M = M[:,vec(sum(M,dims=1).!=0)]
-    mu = pinv(M)*E'
-    RSS = sum((E' - M*mu).^2)
-    TSS = sum((E' .- mean(E',dims=1)).^2)
-    R_squared = 1 - RSS/TSS
-    println("R-squared = $R_squared (fraction of variance explained by factor)")
-end
-
-# Recode a list of arbitrary labels as numbers
-function recode_as_numbers(labels)
-    u = unique(labels)
-    K = length(u)
-    D = Dict(zip(u,1:K))
-    return [D[l] for l in labels], D
-end
 
 # Compute the "one-hot" representation corresponding to given the sequence of labels.
 function one_hot(labels)
@@ -220,182 +148,65 @@ function one_hot(labels)
     return A,u
 end
 
-# function dummy_vars_by_tags(tag_lists)
-    # unique_tags = sort(unique(vcat(tag_lists...)))
-    # K = length(unique_tags)
-    # tag2ind = Dict(zip(unique_tags,1:K))
-    # ind_lists = map(L->[tag2ind[t] for t in L], tag_lists)
-    # X = zeros(length(ind_lists),K)
-    # for (i,L) in enumerate(ind_lists); X[i,L] = 1; end
-    # return X
-# end
-
-
-agg(x,dim) = vec(sum(x,dims=dim))./sqrt.(size(x,dim))
-
-# Estimate stddev and provide a (1-alpha)*100% confidence interval for it.
-function std_with_error(x,alpha,dim)
-    n = size(x,dim)
-    m = vec(mean(x,dims=dim))
-    ss = vec(sum((x .- m).^2, dims=dim))
-    q1,q2 = quantile.(Chisq(n-1), [alpha/2, 1-alpha/2])
-    lower,upper = sqrt.(ss/q1),sqrt.(ss/q2)
-    stddev = sqrt.(ss./(n-1))
-    return stddev,lower,upper
-end
-
-
-# F-test for H0: var(x) = var(y) versus H1: var(x) > var(y).
-function F_test(x,y)
-    n,m = length(x),length(y)
-    if (n<2)||(m<2); return log10(1.0); end   # What is the technically correct thing to do here?
-    F = var(x; corrected=true) / var(y; corrected=true)
-    log10_pvalue = logccdf(FDist(n-1,m-1), F) / log(10)
-    return log10_pvalue
-end
-
-# Compute 100*P % trimmed mean for each column of x (discard the top and bottom 100*P % of the data)
-trimmed_mean(x,P) = (m=floor(Int,P*size(x,1)); mean(sort(x;dims=1)[m:end-m+1, :],dims=1))
-
-function trimmed_scale(x,loc,P)
-    a,b = quantile.(Normal(0,1),[P,1-P])
-    z = 1 - 2*P
-    pa,pb = pdf.(Normal(0,1),[a,b])
-    factor = 1 + (a*pa-b*pb)/z - ((pa-pb)/z)^2
-    m = floor(Int,P*size(x,1))
-    v = mean((sort(x;dims=1)[m:end-m+1, :].-loc).^2, dims=1)
-    return sqrt.(v/factor)
-end
-
-# Robust percent variance explained (PVE) and signal-to-noise ratio (SNR) for each column of x.
-function metrics(x)
-    P = 0.1  # percent to trim for robust estimation AND removal of jumps in the signal
-    # m_total = trimmed_mean(x,P)
-    # s_total = trimmed_scale(x,m_total,P)
-    x_diff = diff(x;dims=1)
-    m_diff = trimmed_mean(x_diff, P)
-    s_diff = trimmed_scale(x_diff,m_diff,P)
-    x_avg = (x[1:end-1,:] + x[2:end,:])/2
-    m_avg = trimmed_mean(x_avg, P)
-    s_avg = trimmed_scale(x_avg,m_avg,P)
-    v_noise = 0.5*s_diff.^2
-    v_total = s_avg.^2 + 0.25*s_diff.^2
-    PVE = vec(1 .- v_noise./v_total)
-    SNR = vec(v_total./v_noise .- 1)
-    return PVE,SNR
-end
-
-# Compute quantile p for a discrete random variable taking values x=[x1,...,xn] with probabilities proportional to w=[w1,...,wn].
-function weighted_quantile(x,w,p)
-    c = 0.0
-    sum_w = sum(w)
-    for i in sortperm(x)
-        c += w[i]/sum_w
-        if c >= p; return x[i]; end
-    end
-    error("Probabilities only add up to $c, which is less than requested quantile, $p.")
-end
-
-
-
-function plot_relationship(x,y)
-    plot(x, y, "b,")
-    grid(axis="y",lw=0.2)
-    xp = range(minimum(x)+eps(),stop=maximum(x)-eps(), length=1000)
-    percentiles = [.01; .05; .1; .2; .4; .6; .8; .9; .95; .99]
-    # yp = spline_fit_and_predict(x,y,xp; lambda=0.0, natural=false, intercept=true, percentiles=percentiles, degree=1)
-    # plot(xp[1:end],yp[1:end], "r-")
-    xs,y_mean = regression(x,y)
-    plot(xs,y_mean,"co-",lw=1,ms=1)
-end
-
-function plot_track(x,contigs, groups=ones(length(x)), colorkey=String[], fmt=","; kwargs...)
-    if isempty(colorkey); colorkey = zip(sort(unique(groups)), color_palette[1:length(unique(groups))]); end
-    for (value,color) in colorkey
-        plot(findall(groups.==value),x[groups.==value], fmt; color=color, kwargs...)
-    end
-    edges = [1; findall(diff(recode_as_numbers(contigs)[1]) .!= 0); length(contigs)]
-    mid = (edges[1:end-1] + edges[2:end])/2
-    for edge in edges; plot([edge,edge],[-1e10,1e10],"k-",lw=0.15); end
-    grid(axis="y",lw=0.2)
-    ylim(minimum(x),maximum(x))
-    xticks(mid,unique(contigs),fontsize=9)
-end
-
-function regression(x,y; nbins=round(Int,2*length(unique(x))^(1/2)))
-    edges = [minimum(x)-eps(); quantile(x,(1:nbins-1)/nbins); maximum(x)+eps()]
-    # edges = range(minimum(x)-eps(), stop = maximum(x)+eps(), length = nbins+1)
-    xs = (edges[1:end-1] + edges[2:end])/2
-    # y_median = [median(y[edges[i] .<= x .< edges[i+1]]) for i = 1:nbins]
-    y_mean = [mean(y[edges[i] .<= x .< edges[i+1]]) for i = 1:nbins]
-    return xs,y_mean
-end
-
-function bivariate_regression(x,y,z; nx=30, ny=30)
-    ex = range(minimum(x)-eps(), stop = maximum(x)+eps(), length = nx+1)
-    ey = range(minimum(y)-eps(), stop = maximum(y)+eps(), length = ny+1)
-    xr = (ex[1:end-1] + ex[2:end])/2
-    yr = (ey[1:end-1] + ey[2:end])/2
-    zr = permutedims([mean(z[(ex[i] .<= x .< ex[i+1]) .& (ey[j] .<= y .< ey[j+1])]) for i=1:nx, j=1:ny])
-    return xr,yr,zr
-end
-
-# Find the indices of entries of B that are in A, assuming they appear in the same order that they appear in A.
-function findin_sorted(A,B)
-    subset = Int[]
-    i = 1; j = 1
-    while (i<=length(A)) && (j<=length(B))
-        if A[i]==B[j]; push!(subset,j); i += 1; end
-        j += 1
-    end
-    return subset
-end
-
-function head(filename; n=10)
-    f = open(filename,"r")
-    s = join([readline(f) for i=1:n],"\n")
-    close(f)
-    return s
-end
-
-function F1score(hits,actual_positives)
-    A,B = hits,actual_positives
-    precision = length(intersect(A,B)) / length(A)
-    recall = length(intersect(A,B)) / length(B)
-    F1 = 2/(1/precision + 1/recall)
-    return F1,precision,recall
-end
-
-impute_missing!(x) = (mis = ismissing.(x); x[mis] .= mean(x[.!mis]); x)
-
-
-# Return vector of booleans indicating whether each element of a is in b.
-function subset_in(a,b)
-    x = falses(length(a))
-    x[findall(in(b),a)] .= 1
-    return x
-end
-
 
 benjamini_hochberg(p) = (o = sortperm(p); m=length(p); padj = zeros(Float64,m); padj[o] = p[o].*(m./(1:m)); padj)
 
 
-function standardize(X)
-    max_iter = 100
-    tol = 1e-6
-    X_old = copy(X)
-    for iter = 1:max_iter 
-        X = scale(X,1)
-        X = scale(X,2)
-        if (maximum(abs.(X - X_old)) < tol); break; end
-        X_old = copy(X)
+# Perform estimation and inference for standard linear regression model:
+#    y = A*beta + e
+#    where e_i ~ N(0,sigma^2) for i=1,...,n.
+#
+# Inputs:
+#   X = n-by-d design matrix
+#   y = length n vector of outcomes
+#
+# Outputs:
+#   beta_hat = length d vector of estimated coefficients
+#   sigma_hat = estimated standard deviation of outcomes
+#   stderr = length d vector of standard errors for entries of beta_hat
+#   t = length d vector of t-statistics for entries of beta_hat
+#   logp = natural log of p-value for the specified test (gt: alt>null, lt: alt<null, tt: alt!=null)
+function infer_linear_regression(X,y; beta_null=zeros(size(X,2)), test="tt")
+    n,d = size(X)
+    @assert(n>d, "Sample size (n) must be greater than number of coefficients (d).")
+    beta_hat = vec(pinv(X)*y)
+    y_hat = vec(X*beta_hat)
+    e = y - y_hat
+    sigma_hat = sqrt.(sum(e.*e)/(n-d))
+    stderr = sigma_hat .* sqrt.(diag(inv(X'*X)))
+    t = (beta_hat - beta_null) ./ stderr
+    logp_gt = logccdf.(TDist(n-d),t)
+    logp_lt = logcdf.(TDist(n-d),t)
+    logp_tt = [min(logp_gt[j],logp_lt[j])+log(2) for j=1:d]
+    logp = Dict("gt"=>logp_gt, "lt"=>logp_lt, "tt"=>logp_tt)[test]
+    RSS = sum(e.*e)
+    TSS = sum((y .- mean(y)).^2)
+    R_squared = 1 - RSS/TSS
+    return beta_hat,sigma_hat,stderr,t,logp,R_squared
+end
+
+
+function plot_association(x,y,xs,xs_names; showline=false)
+    Random.seed!(0)
+    J = length(x)
+    jitter = (rand(J) .- 0.5)*3
+    plot(x .+ jitter, y, "b.", ms=3)
+    if showline
+        beta_hat,sigma_hat,stderr,t,logp,R_squared = infer_linear_regression([ones(J) x], y; beta_null=zeros(2), test="tt")
+        plot(xs, [ones(length(xs)) xs]*beta_hat, "k-", lw=1)
     end
-    return X
+    grid(linewidth=0.25)
+    xticks(xs,xs_names)
 end
 
 
 
 
-end
+
+
+
+
+
+
 
 
